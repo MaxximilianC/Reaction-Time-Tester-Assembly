@@ -1,0 +1,5 @@
+There will be two displays. One display has a timer that starts from zero based on the start of the button press and will stop once the button is released
+That final time on that display is the reaction time of the user.
+The second buzz could be used as a display of increment if the user successfully presses the button within a certain timer
+
+Something that could be done is that we could have an easy level and a hard level where the hard level has a much shorter interaction time.
