@@ -6,3 +6,40 @@ Something that could be done is that we could have an easy level and a hard leve
 The decision between easy mode and hard mode can be based on one button input or two.
 
 We will focus on the easy level first, get that working, and decide if we want to add a hard level.
+
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Here is some barebones pseudocode for main concepts (not done & subject to edits & may be wrong):
+
+~~~loop to have the reaction test happen 4 times~~~
+main:
+      clr r16              ; counter set to 0
+one_whole_reaction_time_cycle:
+      inc r16              ; counter++
+      cpi r16, 4           ; if counter=4 
+      breq end_main        ; end cycle
+
+~~~configuration and turns on RGB pins~~~
+      ldi r17, high(RAMEND)
+      out SPH, r17
+      ldi r16, low(RAMEND)
+      out SPL, r17
+
+      sbi DDRD, DDD6
+      sbi PORTD, PD6        ; pin 6 for red led on
+      sbi DDRD, DDD7
+      sbi PORTD, PD7        ; pin 7 for blue led on
+      sbi DDRD, DDD8
+      sbi PORTD, PD7        ; pin 8 for green led on
+
+~~~random delay timer turns on when button input is pressed down~~
+      cbi  DDRD, DDD2        ; make reaction button an input
+      sbi PORTD, PD2         ; set button to pull-up mode
+{needs isr table stuff here to check button then a timer}
+
+~~~~~~~timer connected to clock display starts counting when random delay timer reaches the random number~~~~
+~~~~~~~~~~~~when button is released timer connect to clock stops (if button released before t.c.t.c reaches end green led lights, if not buzzer sounds)
+
+      rjmp one_whole_reaction_time_cycle
+
+end_main:
+      rjmp end_main         
