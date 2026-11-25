@@ -10,32 +10,73 @@ We will focus on the easy level first, get that working, and decide if we want t
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Here is some barebones pseudocode for main concepts (not done & subject to edits & may be wrong):
 
-~~~loop to have the reaction test happen 4 times~~~
-main:
-      clr r16              ; counter set to 0
-one_whole_reaction_time_cycle:
-      inc r16              ; counter++
-      cpi r16, 4           ; if counter=4 
-      breq end_main        ; end cycle
+~~~vector table~~~
+.org 0x0000                              ; Reset vector
+      jmp       main
+
+.org INT0addr                            ; D2 reaction pressed down button 
+      jmp       button_isr
+
+.org OC1Aaddr                            ; timer compare match to random delay
+      jmp       timer_isr
+
+.org INT_VECTORS_SIZE                    ; end vector table 
 
 ~~~configuration and turns on RGB pins~~~
-      ldi r17, high(RAMEND)
-      out SPH, r17
-      ldi r16, low(RAMEND)
-      out SPL, r17
+main:    
+      ldi       r16, high(RAMEND)        ; one time configuration
+      out       SPH, r16
+      ldi       r16, low(RAMEND)
+      out       SPL, r16
 
-      sbi DDRD, DDD6
-      sbi PORTD, PD6        ; pin 6 for red led on
-      sbi DDRD, DDD7
-      sbi PORTD, PD7        ; pin 7 for blue led on
-      sbi DDRD, DDD8
-      sbi PORTD, PD7        ; pin 8 for green led on
+      sbi       DDRD, DDD6
+      cbi       PORTD, PD6              ; set pin D 6 for red led and turn off
+      sbi       DDRD, DDD7
+      cbi       PORTD, PD7              ; set pin D 7 for blue led and turn off
+      sbi       DDRB, DDB0
+      cbi       PORTB, PB0              ; set pin B 0 for green led and turn off
+
+      sbi       EIMSK, INT0             ; reaction button interrupt
+
+      ldi       r16, 0b01               ; INT0 for any logical change (because will react to when button is pressed down to start timer and released to stop timer)
+      sts       EIRCA, r16
+
+      call       t1_init                ; enable reaction timer ctc
+      sei                               ; enable global interrupts
+
+~~~loop to have the reaction test happen 4 times~~~
+      clr       r16                     ; counter set to 0
+one_whole_reaction_time_cycle:
+      inc       r16                    ; counter++
+      cpi       r16, 4                 ; if counter=4 
+      breq       end_main              ; end cycle
+
+      cbi        DDRD, DDD2            ; make reaction button an input
+      sbi       PORTD, PD2             ; set button to pull-up mode
+
+t1_init:
+
+      clr       r16                    ; start counter at zero
+      sts       TCNT1H, r16
+      sts       TCNT1L, r16
+                                       ; count up to match value (1s = 62499?)
+      ldi      r16, high(some kind of number)
+      sts      OCR1AH, r16
+      ldi      r16, low(some kind of number)
+      sts      OCR1AL, r16 
+
+      clr      r16                      ; set mode to ctc
+      sts      TCCR1B, r16
+                                        ; ctc mode with clock prescalar set to smth (use CS12, CS11, CS10. 1<<WGM12 for ctc mode)
+      ldi      r16, (1<<WGM12) | (1<<smth)
+      sts      TCCR1B, r16              ; clock is started
+
+      ldi      r16, (1<<OCIE1A)
+      sts      TIMSK1, r16              ; enable ctc interrupts
+
+      ret                               ; t1_init
 
 ~~~random delay timer turns on when button input is pressed down~~
-      cbi  DDRD, DDD2        ; make reaction button an input
-      sbi PORTD, PD2         ; set button to pull-up mode
-{needs isr table stuff here to check button then a timer}
-
 ~~~~~~~timer connected to clock display starts counting when random delay timer reaches the random number~~~~
 ~~~~~~~~~~~~when button is released timer connect to clock stops (if button released before t.c.t.c reaches end green led lights, if not buzzer sounds)
 
