@@ -57,6 +57,14 @@ main:
     clr     r24
     clr     r25
 
+    ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    ; Configuration for active buzzer
+    sbi     DDRB, DDB5
+    ; turns the active buzzer off 
+    cbi     PORTB, PB5
+
+    ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     ;-----------------------------------
     ; Configure INT0
 
@@ -109,6 +117,19 @@ main:
 ; Main loop
 
 main_loop:
+
+    ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    ;looks if an attempt made if made if doesn't work runs buzz sound
+    cpi    r18, FINISHED_STATE
+    brne    main_loop
+    ;looks if buzzer needs to sound
+    sbis    PORTB, PB5
+    rjmp     main_loop
+    ;turns buzzer on for a short moment
+    rcall    short_buzz_sound
+    cbi    PORTB, PB5
+    ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    
     rjmp    main_loop
 
 ;---------------------------------------
@@ -238,6 +259,28 @@ button_isr:
 
     ; Reaction time is preserved in r25:r24
 
+    ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    ; Looks at reaction time in r25;r24 and checks if it's longer than 1 second
+    cpi     r24, low(1000)
+    ldi     r16, high(1000)
+    cpc     r25, r16
+
+    ; Branches if the reaction time is less than 1 second
+    brlo    within_reaction_time
+
+    ; buzzer goes off if outside reaction time allowed (the buzzer inside the main_loop creates a short buzzing sound instead of continous)
+    sbi     PORTB, PB5
+    rjmp    buzzer_done
+
+    ; no buzzer goes off
+within_reaction_time:
+    cbi     PORTB, PB5
+
+    ; buzzer is completed
+buzzer_done:
+    ldi     r18, FINISHED_STATE
+    ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 button_done:
     ; Restore registers and SREG
     pop     r16
@@ -245,3 +288,33 @@ button_done:
     pop     r16
 
     reti
+
+ ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+short_buzz_sound:
+    ; creates a basic cycle loop to create a brief delay (should be 1/3 of a second)
+    push    r20
+    push    r21
+    push    r22
+    ldi     r20, 21
+L3:
+    ;for (int i =21; i > 0; --i) {
+    ldi     r21, 200
+L2:
+    ; for (int j = 2--; j > 0; --j) {
+    ldi     r22, 250
+L1: 
+    ; for (int l = 250; k > 0; --k) {
+    nop
+    nop
+    dec     r22 ; --k
+    brne     L1 
+    dec     r21
+    brne     L2 
+    dec     r20
+    brne     L3 
+
+    pop    r22
+    pop    r21
+    pop    r20
+    ret
+    ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
