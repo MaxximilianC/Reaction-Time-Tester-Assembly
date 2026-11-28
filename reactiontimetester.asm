@@ -11,7 +11,7 @@
 .equ YELLOW_STATE = 1
 .equ GREEN_STATE = 2
 .equ FINISHED_STATE = 3
-
+.equ FAULT_STATE = 4
 ;---------------------------------------
 ; LCD pin definitions
 
@@ -85,6 +85,9 @@ main:
     clr     r24
     clr     r25
 
+    ; Initialized Timer0 as a free running hardware counter n=64
+    ldi r16 (1<<CS01)|(1<<CS00)
+    out TCCR0B,r16
     ;-----------------------------------
     ; Configure INT0
 
